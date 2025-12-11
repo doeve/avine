@@ -28,6 +28,19 @@ chrome.runtime.onMessage.addListener(async (message) => {
     });
     // Close offscreen doc to save resources? 
     // Maybe keep it open for faster subsequent starts.
+  } else if (message.type === 'RECOGNITION_RESULT') {
+    // Check if we should notify
+    const data = await chrome.storage.local.get(['showPopups']);
+    // Default to true if not set
+    if (data.showPopups !== false) {
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icon-128.png', // Ensure this exists or use a default
+        title: 'Track Detected',
+        message: `${message.data.title} - ${message.data.artist}`,
+        priority: 1
+      });
+    }
   }
 });
 

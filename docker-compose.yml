@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: avine
+      POSTGRES_PASSWORD: avine_password
+      POSTGRES_DB: avine_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - /mnt/data/postgres_pg16:/var/lib/postgresql/data
+    networks:
+      - avine-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - /mnt/data/redis:/data
+    networks:
+      - avine-network
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - /mnt/data/minio:/data
+    networks:
+      - avine-network
+
+  # Placeholder for API service (will be built from apps/api)
+  # api:
+  #   build:
+  #     context: .
+  #     dockerfile: apps/api/Dockerfile
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #     - minio
+  #   networks:
+  #     - avine-network
+
+networks:
+  avine-network:
+    driver: bridge

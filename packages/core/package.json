@@ -1,0 +1,23 @@
+{
+  "name": "@avine/core",
+  "version": "0.0.1",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w",
+    "generate": "drizzle-kit generate:pg",
+    "db:push": "drizzle-kit push:pg"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.28.0",
+    "postgres": "^3.3.0",
+    "redis": "^4.6.0",
+    "@avine/types": "*"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.19.0",
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}

@@ -1,0 +1,23 @@
+import { db, knownTracks } from '@avine/core';
+import { AudioFingerprinter } from '@avine/fingerprint';
+import fs from 'fs';
+import path from 'path';
+import 'dotenv/config';
+
+// Point to local binaries
+const fingerprinter = new AudioFingerprinter(
+  path.join(process.cwd(), 'bin/ffmpeg'),
+  path.join(process.cwd(), 'bin/fpcalc')
+);
+
+// ... rest of file (we only need to verify the constructor usage, but replace_file_content modifies source, usage needs to be updated if constructor changed)
+// Wait, I changed constructor to have default values, so existing usage `new AudioFingerprinter()` works but uses default paths.
+// But ingest script is in root, so process.cwd() is root. 
+// packages/fingerprint/src/index.ts uses process.cwd().
+// If AudioFingerprinter is imported from @avine/fingerprint, it should work.
+
+async function ingestFolder(folderPath: string) {
+  // ...
+  // I need to read the file first to know what to replace.
+  // Actually I don't need to replace ingest.ts if the default values in AudioFingerprinter are correct.
+}

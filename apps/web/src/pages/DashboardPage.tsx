@@ -36,7 +36,7 @@ export function DashboardPage() {
 
   const fetchSessions = async () => {
     try {
-      const { data } = await api.get('/api/sessions');
+      const { data } = await api.get('/sessions');
       setSessions(data);
     } catch (error) {
       console.error('Failed to fetch sessions', error);
@@ -58,7 +58,7 @@ export function DashboardPage() {
     setSelectedSessionId(sessionId);
     setLoadingTracks(true);
     try {
-      const { data } = await api.get(`/api/sessions/${sessionId}`);
+      const { data } = await api.get(`/sessions/${sessionId}`);
       setSelectedTracks(data.tracks);
     } catch (error) {
       console.error('Failed to fetch tracks', error);

@@ -29,7 +29,7 @@ export function SpotifyConnect({ sessionId }: SpotifyConnectProps) {
 
   const checkStatus = async () => {
     try {
-      const { data } = await api.get('/api/spotify/status');
+      const { data } = await api.get('/spotify/status');
       setConnected(data.connected);
       if (data.user) setUser(data.user);
     } catch (error) {
@@ -41,7 +41,7 @@ export function SpotifyConnect({ sessionId }: SpotifyConnectProps) {
 
   const handleConnect = async () => {
     try {
-      const { data } = await api.get('/api/spotify/auth');
+      const { data } = await api.get('/spotify/auth');
       window.location.href = data.url;
     } catch (error) {
       console.error('Failed to get Spotify auth URL:', error);
@@ -50,7 +50,7 @@ export function SpotifyConnect({ sessionId }: SpotifyConnectProps) {
 
   const handleDisconnect = async () => {
     try {
-      await api.delete('/api/spotify/disconnect');
+      await api.delete('/spotify/disconnect');
       setConnected(false);
       setUser(null);
     } catch (error) {
@@ -63,7 +63,7 @@ export function SpotifyConnect({ sessionId }: SpotifyConnectProps) {
     
     setCreating(true);
     try {
-      const { data } = await api.post('/api/spotify/playlist', { sessionId });
+      const { data } = await api.post('/spotify/playlist', { sessionId });
       setResult({
         url: data.playlistUrl,
         added: data.tracksAdded,

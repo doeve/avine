@@ -10,8 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@avine/types": "*",
-    "@avine/ui": "*",
+    "@avine/types": "workspace:*",
+    "@avine/ui": "workspace:*",
     "@radix-ui/react-slot": "^1.0.0",
     "@tanstack/react-query": "^4.36.0",
     "axios": "^1.6.0",

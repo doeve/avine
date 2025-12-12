@@ -56,7 +56,7 @@ async function main() {
     },
   });
 
-  await server.register(authRoutes, { prefix: '/auth' });
+  await server.register(authRoutes, { prefix: '/api/auth' });
   await server.register(uploadRoutes, { prefix: '/api' });
   await server.register(analysisRoutes, { prefix: '/api' });
   await server.register(exportRoutes, { prefix: '/api' });

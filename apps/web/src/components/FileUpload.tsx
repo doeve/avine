@@ -29,7 +29,7 @@ export function FileUpload() {
     formData.append('file', file);
 
     try {
-      const { data } = await api.post('/api/upload', formData, {
+      const { data } = await api.post('/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

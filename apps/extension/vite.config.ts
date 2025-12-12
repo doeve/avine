@@ -9,6 +9,9 @@ export default defineConfig({
     react(),
     crx({ manifest }),
   ],
+  server: {
+    port: 1243,
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

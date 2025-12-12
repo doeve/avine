@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, ExternalLink, Music } from 'lucide-react';
 import { Button } from '@avine/ui';
 
@@ -16,7 +16,7 @@ export function ScanMixScreen({ onBack }: ScanMixScreenProps) {
     { startTime: '04:20', endTime: '07:15', title: 'Bleuu (Dye)', artist: 'Fred again..' },
   ]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     // Query active tab for media
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const activeTab = tabs[0];

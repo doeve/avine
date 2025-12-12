@@ -7,8 +7,8 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@avine/core": "*",
-    "@avine/types": "*",
+    "@avine/core": "workspace:*",
+    "@avine/types": "workspace:*",
     "@fastify/cors": "^8.4.0",
     "@fastify/multipart": "^8.3.1",
     "@fastify/swagger": "^8.12.0",

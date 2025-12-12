@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, User, Activity, Music, Radio } from 'lucide-react';
 // import { Button } from '@avine/ui'; // Removed unused import
 
@@ -12,7 +12,7 @@ export function LiveListenScreen({ onBack }: LiveListenScreenProps) {
   const [showPopups, setShowPopups] = useState(true);
   const [detections, setDetections] = useState<any[]>([]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     // Check initial state
     chrome.storage.local.get(['isListening', 'trackHistory'], (data) => {
       if (data.isListening) setIsListening(true);

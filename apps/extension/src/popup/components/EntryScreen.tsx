@@ -1,4 +1,3 @@
-import React from 'react';
 import { Library, Activity, Settings, User, ArrowRight } from 'lucide-react';
 import { Button } from '@avine/ui';
 

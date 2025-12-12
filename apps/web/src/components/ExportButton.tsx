@@ -26,7 +26,7 @@ export function ExportButton({ sessionId }: ExportButtonProps) {
     try {
       setExporting(format);
       
-      const { data } = await api.get(`/api/sessions/${sessionId}/export`, {
+      const { data } = await api.get(`/sessions/${sessionId}/export`, {
         params: { format, download: download.toString() },
       });
 

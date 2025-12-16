@@ -8,7 +8,8 @@
     "scripting",
     "storage",
     "tabCapture",
-    "offscreen"
+    "offscreen",
+    "notifications"
   ],
   "host_permissions": [
     "<all_urls>",
@@ -25,6 +26,15 @@
     {
       "matches": ["<all_urls>"],
       "js": ["src/content/index.ts"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/offscreen/offscreen.html",
+        "src/offscreen/offscreen.ts"
+      ],
+      "matches": ["<all_urls>"]
     }
   ]
 }

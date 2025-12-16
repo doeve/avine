@@ -59,6 +59,11 @@ export function setupStreamGateway(io: Server) {
 
       // Append chunk to buffer
       session.buffer.push(Buffer.from(chunk));
+      
+      // Debug logging (sample every ~100 chunks or similar if verbose, strictly debugging here)
+      if (Math.random() < 0.05) {
+         console.log(`[Stream] Received audio chunk from ${socket.id}. Buffer size: ${session.buffer.length}`);
+      }
 
       // Manage buffer size (sliding window)
       const currentSize = session.buffer.reduce((acc, b) => acc + b.length, 0);
@@ -212,9 +217,10 @@ async function recognizeBuffer(socket: Socket, session: StreamSession, buffer: B
           votes: bestCandidate.votes,
         });
 
-        console.log(`Stream Match: ${trackMeta.artist} - ${trackMeta.title} (Votes: ${bestCandidate.votes}, Conf: ${confidence}%)`);
+        console.log(`[Stream] Match Found: ${trackMeta.artist} - ${trackMeta.title} (Votes: ${bestCandidate.votes}, Conf: ${confidence}%)`);
       }
     } else {
+      console.log(`[Stream] No match found. Top Votes: ${bestCandidate?.votes || 0}`);
       socket.emit('recognition_status', { 
         status: 'listening', 
         message: `Analyzing... (${matches.length} hash matches)` 

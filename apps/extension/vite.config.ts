@@ -11,6 +11,10 @@ export default defineConfig({
   ],
   server: {
     port: 1243,
+    hmr: {
+      host: 'localhost',
+      port: 1243,
+    },
   },
   resolve: {
     alias: {
@@ -20,7 +24,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        offscreen: 'src/offscreen/offscreen.html',
+        offscreen: path.resolve(__dirname, 'src/offscreen/offscreen.html'),
       },
     },
   },

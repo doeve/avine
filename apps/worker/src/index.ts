@@ -261,14 +261,32 @@ const worker = new Worker('audio-processing', async job => {
       console.log(`Downloaded URL to ${localFilePath}`);
     }
 
+    // Convert to WAV first to ensure compatibility (fpcalc can be picky)
+    const wavPath = localFilePath.replace(/\.[^/.]+$/, "") + ".wav";
+    console.log(`Converting to WAV: ${wavPath}`);
+    
+    await execFileAsync(ffmpegPath, [
+      '-y',
+      '-i', localFilePath,
+      '-ac', '1', // Mono
+      '-ar', '44100', // 44.1kHz (Chromaprint standard)
+      wavPath
+    ]);
+
     // Get duration from fingerprint
-    const fpResult = await fingerprintFile(localFilePath);
+    const fpResult = await fingerprintFile(wavPath);
     const duration = fpResult.duration;
     
-    console.log(`Analyzing file: ${localFilePath} (${duration}s)`);
+    console.log(`Analyzing file: ${wavPath} (${duration}s)`);
 
     // Recognize tracks using subfingerprint matching
-    const identifiedTracks = await recognizeAudio(localFilePath, duration);
+    // Use the WAV path for recognition
+    const identifiedTracks = await recognizeAudio(wavPath, duration);
+
+    // Cleanup generated WAV
+    if (fs.existsSync(wavPath)) {
+      fs.unlinkSync(wavPath);
+    }
 
     if (identifiedTracks.length === 0) {
       console.log('No tracks detected.');

@@ -1,32 +1,93 @@
+/* Import Inter font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
  
 @layer base {
   :root {
-    --background: 224 71% 4%;
-    --foreground: 210 40% 98%;
-    --card: 224 71% 4%;
-    --card-foreground: 210 40% 98%;
-    --popover: 224 71% 4%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 142 71% 45%;
-    --primary-foreground: 144.9 80.4% 10%;
-    --secondary: 215 27.9% 16.9%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 215 27.9% 16.9%;
-    --muted-foreground: 217.9 10.6% 64.9%;
-    --accent: 215 27.9% 16.9%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 215 27.9% 16.9%;
-    --input: 215 27.9% 16.9%;
-    --ring: 142 71% 45%;
-    --radius: 0.5rem;
+    /* Avine Dark Theme - Premium Navy Design */
+    --background: 212 33% 8%; /* #0F1419 */
+    --foreground: 0 0% 100%; /* #FFFFFF */
+    --card: 216 23% 14%; /* #1A1F2A */
+    --card-foreground: 0 0% 100%;
+    --popover: 216 23% 14%;
+    --popover-foreground: 0 0% 100%;
+    
+    /* Teal Accent */
+    --primary: 168 100% 43%; /* #00DDBB */
+    --primary-foreground: 212 33% 8%;
+    
+    /* Tab Background */
+    --secondary: 220 18% 22%; /* #303540 */
+    --secondary-foreground: 0 0% 100%;
+    
+    /* Muted/Secondary Text */
+    --muted: 220 18% 22%;
+    --muted-foreground: 218 12% 65%; /* #A0A8B8 */
+    
+    /* Active Tab */
+    --accent: 220 15% 28%; /* #404550 */
+    --accent-foreground: 0 0% 100%;
+    
+    /* Destructive/Stop */
+    --destructive: 0 60% 40%; /* #CC3333 */
+    --destructive-foreground: 0 60% 70%; /* #FF6666 */
+    
+    --border: 220 18% 22%; /* #333544 */
+    --input: 220 18% 22%;
+    --ring: 168 100% 43%;
+    --radius: 0.75rem;
+    
+    /* Custom Colors */
+    --teal: 168 100% 43%; /* #00DDBB */
+    --green-dot: 148 100% 50%; /* #00FF88 */
+    --progress-fill: 168 80% 39%; /* #00C8AA */
+  }
+}
+
+@layer utilities {
+  /* Custom Scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  /* Pulse animation for listening indicator */
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .animate-pulse-glow {
+    animation: pulse-glow 1.5s ease-in-out infinite;
+  }
+
+  /* Progress bar animation */
+  @keyframes progress-shine {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .progress-bar-animated {
+    background: linear-gradient(90deg, 
+      hsl(var(--progress-fill)) 0%, 
+      hsl(var(--primary)) 50%, 
+      hsl(var(--progress-fill)) 100%);
+    background-size: 200% 100%;
+    animation: progress-shine 2s linear infinite;
   }
 }
 
 body {
   @apply bg-background text-foreground;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }

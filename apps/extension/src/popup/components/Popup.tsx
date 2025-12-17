@@ -258,16 +258,6 @@ function LiveListenContent({
   onToggleNotifications,
   onExport
 }: LiveListenContentProps) {
-  // Mock data for demonstration
-  const mockTracks: Track[] = [
-    { timestamp: 'Now', title: 'Midnight City', artist: 'M83', isLive: true },
-    { timestamp: '14:02', title: 'Glue', artist: 'Bicep', isLive: false },
-    { timestamp: '13:58', title: 'Opus', artist: 'Eric Prydz', isLive: false },
-    { timestamp: '13:54', title: 'Innerbloom', artist: 'Rufus Du Sol', isLive: false },
-    { timestamp: '13:48', title: 'Strobe', artist: 'Deadmau5', isLive: false },
-  ];
-  const displayTracks = tracks.length > 0 ? tracks : mockTracks;
-
   return (
     <>
       {/* Song Preview Section - #18181b */}
@@ -337,12 +327,22 @@ function LiveListenContent({
         <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: COLORS.textMuted }}>
           Session Feed
         </span>
-        <span 
-          className="text-[10px] font-medium text-white px-1.5 py-0.5 rounded"
-          style={{ backgroundColor: '#2a2d35' }}
-        >
-          Live
-        </span>
+        {isListening && (
+          <span 
+            className="text-[10px] font-medium text-white px-1.5 py-0.5 rounded"
+            style={{ backgroundColor: '#2a2d35' }}
+          >
+            Live
+          </span>
+        )}
+        {!isListening && tracks.length > 0 && (
+          <span 
+            className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+            style={{ backgroundColor: '#2a2d35', color: COLORS.textMuted }}
+          >
+            {tracks.length} tracks
+          </span>
+        )}
       </div>
 
       {/* Track List - #18181b background */}
@@ -350,11 +350,23 @@ function LiveListenContent({
         className="flex-1 overflow-y-auto custom-scrollbar"
         style={{ backgroundColor: COLORS.tracklist }}
       >
-        <div className="py-1">
-          {displayTracks.map((track, idx) => (
-            <TrackRow key={idx} track={track} />
-          ))}
-        </div>
+        {tracks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-2 p-6 text-center">
+            <Music className="w-8 h-8 opacity-20" style={{ color: COLORS.textMuted }} />
+            <p className="text-xs" style={{ color: COLORS.textMuted }}>
+              {isListening ? 'Identifying tracks...' : 'No tracks identified yet'}
+            </p>
+            <p className="text-[10px]" style={{ color: COLORS.textMuted, opacity: 0.6 }}>
+              {isListening ? 'Results will appear here' : 'Start listening to identify songs'}
+            </p>
+          </div>
+        ) : (
+          <div className="py-1">
+            {tracks.map((track, idx) => (
+              <TrackRow key={idx} track={track} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Footer - #0f0f10 */}

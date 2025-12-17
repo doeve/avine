@@ -33,6 +33,20 @@ function WaveIcon({ className }: { className?: string }) {
   );
 }
 
+// Color constants matching exact design spec
+const COLORS = {
+  header: '#0f0f10',        // Header background
+  preview: '#18181b',       // Song preview card background
+  separator: '#191c23',     // Session feed separator label
+  tracklist: '#18181b',     // Tracklist background
+  trackActive: '#202022',   // Highlighted/active track row
+  footer: '#0f0f10',        // Footer background
+  text: '#ffffff',          // Primary text
+  textMuted: '#8B949E',     // Muted/secondary text
+  accent: '#00C853',        // Green accent
+  accentRed: '#F85149',     // Red for stop button
+};
+
 export function Popup() {
   const [activeTab, setActiveTab] = useState<TabMode>('live-listen');
   const [isListening, setIsListening] = useState(false);
@@ -148,15 +162,16 @@ export function Popup() {
     navigator.clipboard.writeText(text);
   };
 
-  // Main background color - uniform throughout
-  const BG_MAIN = '#0F1419';
-  const BG_CARD = '#161B22';
-  const TEXT_MUTED = '#8B949E';
-
   return (
-    <div className="w-[320px] h-[520px] flex flex-col text-white overflow-hidden" style={{ backgroundColor: BG_MAIN }}>
-      {/* Header - Same background as main, no distinct color */}
-      <header className="h-10 px-3 flex items-center justify-between shrink-0">
+    <div 
+      className="w-[320px] h-[520px] flex flex-col text-white overflow-hidden rounded-xl"
+      style={{ backgroundColor: COLORS.header }}
+    >
+      {/* Header - #0f0f10 */}
+      <header 
+        className="h-10 px-3 flex items-center justify-between shrink-0"
+        style={{ backgroundColor: COLORS.header }}
+      >
         <div className="flex items-center gap-1.5">
           <WaveIcon className="w-4 h-4 text-[#00C853]" />
           <span className="text-sm font-semibold">Avine</span>
@@ -166,9 +181,9 @@ export function Popup() {
         </button>
       </header>
 
-      {/* Mode Tabs - In a card container */}
-      <div className="px-3 pb-3">
-        <div className="flex rounded-lg p-0.5" style={{ backgroundColor: BG_CARD }}>
+      {/* Mode Tabs - In header area */}
+      <div className="px-3 pb-3" style={{ backgroundColor: COLORS.header }}>
+        <div className="flex rounded-lg p-0.5" style={{ backgroundColor: '#1a1a1d' }}>
           <button
             onClick={() => setActiveTab('scan-mix')}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-medium transition-all ${
@@ -194,7 +209,7 @@ export function Popup() {
         </div>
       </div>
 
-      {/* Content Area - Same background as main */}
+      {/* Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {activeTab === 'live-listen' ? (
           <LiveListenContent
@@ -205,9 +220,6 @@ export function Popup() {
             onToggleListening={toggleListening}
             onToggleNotifications={toggleNotifications}
             onExport={handleExport}
-            bgMain={BG_MAIN}
-            bgCard={BG_CARD}
-            textMuted={TEXT_MUTED}
           />
         ) : (
           <ScanMixContent
@@ -216,9 +228,6 @@ export function Popup() {
             mediaData={mediaData}
             tracks={tracks}
             onExport={handleExport}
-            bgMain={BG_MAIN}
-            bgCard={BG_CARD}
-            textMuted={TEXT_MUTED}
           />
         )}
       </div>
@@ -238,9 +247,6 @@ interface LiveListenContentProps {
   onToggleListening: () => void;
   onToggleNotifications: () => void;
   onExport: () => void;
-  bgMain: string;
-  bgCard: string;
-  textMuted: string;
 }
 
 function LiveListenContent({
@@ -250,19 +256,26 @@ function LiveListenContent({
   notificationsEnabled,
   onToggleListening,
   onToggleNotifications,
-  onExport,
-  bgCard,
-  textMuted
+  onExport
 }: LiveListenContentProps) {
+  // Mock data for demonstration
+  const mockTracks: Track[] = [
+    { timestamp: 'Now', title: 'Midnight City', artist: 'M83', isLive: true },
+    { timestamp: '14:02', title: 'Glue', artist: 'Bicep', isLive: false },
+    { timestamp: '13:58', title: 'Opus', artist: 'Eric Prydz', isLive: false },
+    { timestamp: '13:54', title: 'Innerbloom', artist: 'Rufus Du Sol', isLive: false },
+    { timestamp: '13:48', title: 'Strobe', artist: 'Deadmau5', isLive: false },
+  ];
+  const displayTracks = tracks.length > 0 ? tracks : mockTracks;
+
   return (
     <>
-      {/* Player Section - NO card wrapper, sits directly on main bg */}
-      <div className="px-3 pb-3">
+      {/* Song Preview Section - #18181b */}
+      <div className="px-3 py-3" style={{ backgroundColor: COLORS.preview }}>
         <div className="flex gap-3">
-          {/* Album Art - Small ~56px, TAB badge bottom-LEFT */}
+          {/* Album Art */}
           <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-purple-600 to-purple-900 flex items-center justify-center shrink-0 relative">
             <Music className="w-6 h-6 text-white/80" />
-            {/* TAB Badge - Bottom LEFT */}
             <div className="absolute bottom-0.5 left-0.5 bg-black text-[7px] font-bold px-1 py-0.5 rounded-sm text-white flex items-center gap-0.5">
               <span className="text-[6px]">■</span>
               TAB
@@ -284,100 +297,98 @@ function LiveListenContent({
             <h3 className="text-sm font-semibold truncate leading-tight">
               {currentTrack?.title || 'Waiting for audio...'}
             </h3>
-            <p className="text-xs truncate" style={{ color: textMuted }}>
+            <p className="text-xs truncate" style={{ color: COLORS.textMuted }}>
               {currentTrack?.artist || 'Start listening to identify tracks'}
             </p>
           </div>
         </div>
+
+        {/* Stop/Start Button - equal margins */}
+        <div className="mt-3">
+          <button
+            onClick={onToggleListening}
+            className={`w-full h-9 rounded-md font-semibold text-xs flex items-center justify-center gap-1.5 transition-all ${
+              isListening
+                ? 'border border-[#F85149] text-[#F85149]'
+                : 'bg-[#00C853] text-[#0D1117] hover:bg-[#00E676]'
+            }`}
+            style={isListening ? { backgroundColor: 'rgba(248, 81, 73, 0.1)' } : {}}
+          >
+            {isListening ? (
+              <>
+                <StopCircle className="w-3.5 h-3.5" />
+                STOP LISTENING
+              </>
+            ) : (
+              <>
+                <Mic className="w-3.5 h-3.5" />
+                START LISTENING
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* Stop/Start Button - Ghost/outlined style with subtle red fill */}
-      <div className="px-3 pb-3">
-        <button
-          onClick={onToggleListening}
-          className={`w-full h-9 rounded-md font-semibold text-xs flex items-center justify-center gap-1.5 transition-all ${
-            isListening
-              ? 'border border-[#F85149] text-[#F85149] hover:bg-[#F8514910]'
-              : 'bg-[#00C853] text-[#0D1117] hover:bg-[#00E676]'
-          }`}
-          style={isListening ? { backgroundColor: 'rgba(248, 81, 73, 0.1)' } : {}}
-        >
-          {isListening ? (
-            <>
-              <StopCircle className="w-3.5 h-3.5" />
-              STOP LISTENING
-            </>
-          ) : (
-            <>
-              <Mic className="w-3.5 h-3.5" />
-              START LISTENING
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Section Header with Live Badge */}
-      <div className="px-3 py-1.5 flex items-center justify-between">
-        <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: textMuted }}>
+      {/* Session Feed Separator - #191c23 */}
+      <div 
+        className="px-3 py-2 flex items-center justify-between"
+        style={{ backgroundColor: COLORS.separator }}
+      >
+        <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: COLORS.textMuted }}>
           Session Feed
         </span>
-        <span className="text-[10px] font-medium text-white px-1.5 py-0.5 rounded" style={{ backgroundColor: bgCard }}>
+        <span 
+          className="text-[10px] font-medium text-white px-1.5 py-0.5 rounded"
+          style={{ backgroundColor: '#2a2d35' }}
+        >
           Live
         </span>
       </div>
 
-      {/* Track List - Same background as main, no distinct color */}
-      {(() => {
-        // Mock data for demonstration
-        const mockTracks: Track[] = [
-          { timestamp: 'Now', title: 'Midnight City', artist: 'M83', isLive: true },
-          { timestamp: '14:02', title: 'Glue', artist: 'Bicep', isLive: false },
-          { timestamp: '13:58', title: 'Opus', artist: 'Eric Prydz', isLive: false },
-          { timestamp: '13:54', title: 'Innerbloom', artist: 'Rufus Du Sol', isLive: false },
-          { timestamp: '13:48', title: 'Strobe', artist: 'Deadmau5', isLive: false },
-        ];
-        const displayTracks = tracks.length > 0 ? tracks : mockTracks;
-        
-        return (
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <div className="py-1">
-              {displayTracks.map((track, idx) => (
-                <TrackRow key={idx} track={track} bgCard={bgCard} textMuted={textMuted} />
-              ))}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Notifications Toggle - Same bg as main */}
-      <div className="px-3 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <Bell className="w-3.5 h-3.5" style={{ color: textMuted }} />
-          <span className="text-xs" style={{ color: textMuted }}>Desktop Notifications</span>
+      {/* Track List - #18181b background */}
+      <div 
+        className="flex-1 overflow-y-auto custom-scrollbar"
+        style={{ backgroundColor: COLORS.tracklist }}
+      >
+        <div className="py-1">
+          {displayTracks.map((track, idx) => (
+            <TrackRow key={idx} track={track} />
+          ))}
         </div>
-        <button
-          onClick={onToggleNotifications}
-          className={`w-8 h-4 rounded-full p-0.5 transition-colors ${
-            notificationsEnabled ? 'bg-[#00C853]' : 'bg-[#30363D]'
-          }`}
-        >
-          <div
-            className={`w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${
-              notificationsEnabled ? 'translate-x-4' : 'translate-x-0'
-            }`}
-          />
-        </button>
       </div>
 
-      {/* Export Button - Same bg as main */}
-      <div className="px-3 py-2">
-        <button
-          onClick={onExport}
-          className="w-full h-10 rounded-md bg-white text-[#0D1117] font-semibold text-xs flex items-center justify-center gap-1.5 hover:bg-gray-100 transition-colors"
-        >
-          <Upload className="w-3.5 h-3.5" />
-          EXPORT SESSION
-        </button>
+      {/* Footer - #0f0f10 */}
+      <div style={{ backgroundColor: COLORS.footer }}>
+        {/* Notifications Toggle */}
+        <div className="px-3 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Bell className="w-3.5 h-3.5" style={{ color: COLORS.textMuted }} />
+            <span className="text-xs" style={{ color: COLORS.textMuted }}>Desktop Notifications</span>
+          </div>
+          <button
+            onClick={onToggleNotifications}
+            className={`w-8 h-4 rounded-full p-0.5 transition-colors ${
+              notificationsEnabled ? 'bg-[#00C853]' : 'bg-[#30363D]'
+            }`}
+          >
+            <div
+              className={`w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${
+                notificationsEnabled ? 'translate-x-4' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+
+        {/* Export Button - equal padding on all sides */}
+        <div className="px-3 pb-3 pt-1">
+          <button
+            onClick={onExport}
+            className="w-full h-10 rounded-md bg-white text-[#0D1117] font-semibold text-xs flex items-center justify-center gap-1.5 hover:bg-gray-100 transition-colors"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            EXPORT SESSION
+          </button>
+        </div>
       </div>
     </>
   );
@@ -393,9 +404,6 @@ interface ScanMixContentProps {
   mediaData: MediaData | null;
   tracks: Track[];
   onExport: () => void;
-  bgMain: string;
-  bgCard: string;
-  textMuted: string;
 }
 
 function ScanMixContent({
@@ -403,9 +411,7 @@ function ScanMixContent({
   scanProgress,
   mediaData,
   tracks,
-  onExport,
-  bgCard,
-  textMuted
+  onExport
 }: ScanMixContentProps) {
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -427,10 +433,10 @@ function ScanMixContent({
 
   return (
     <>
-      {/* Player Section - NO card wrapper */}
-      <div className="px-3 pb-3">
+      {/* Song Preview Section - #18181b */}
+      <div className="px-3 py-3" style={{ backgroundColor: COLORS.preview }}>
         <div className="flex gap-3">
-          {/* Album Art - TAB badge bottom-LEFT */}
+          {/* Album Art */}
           <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-teal-600 to-teal-900 flex items-center justify-center shrink-0 relative">
             <Disc className="w-6 h-6 text-white/80" />
             <div className="absolute bottom-0.5 left-0.5 bg-black text-[7px] font-bold px-1 py-0.5 rounded-sm text-white flex items-center gap-0.5">
@@ -453,7 +459,7 @@ function ScanMixContent({
                 )}
               </div>
               <button className="p-0.5 hover:bg-white/5 rounded transition-colors">
-                <ExternalLink className="w-3.5 h-3.5" style={{ color: textMuted }} />
+                <ExternalLink className="w-3.5 h-3.5" style={{ color: COLORS.textMuted }} />
               </button>
             </div>
             <h3 className="text-sm font-semibold truncate leading-tight">
@@ -470,10 +476,10 @@ function ScanMixContent({
                   />
                 </div>
                 <div className="flex justify-between mt-0.5">
-                  <span className="text-[9px]" style={{ color: textMuted }}>
+                  <span className="text-[9px]" style={{ color: COLORS.textMuted }}>
                     {formatTime(scanProgress.current)}
                   </span>
-                  <span className="text-[9px]" style={{ color: textMuted }}>
+                  <span className="text-[9px]" style={{ color: COLORS.textMuted }}>
                     {formatTime(scanProgress.total)}
                   </span>
                 </div>
@@ -483,27 +489,36 @@ function ScanMixContent({
         </div>
       </div>
 
-      {/* Section Header */}
-      <div className="px-3 py-1.5 flex items-center justify-between">
-        <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: textMuted }}>
+      {/* Section Header - #191c23 */}
+      <div 
+        className="px-3 py-2 flex items-center justify-between"
+        style={{ backgroundColor: COLORS.separator }}
+      >
+        <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: COLORS.textMuted }}>
           Identified Songs
         </span>
-        <span className="text-[10px] font-medium text-[#00C853] px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(0, 200, 83, 0.1)' }}>
+        <span 
+          className="text-[10px] font-medium text-[#00C853] px-1.5 py-0.5 rounded"
+          style={{ backgroundColor: 'rgba(0, 200, 83, 0.1)' }}
+        >
           {displayTracks.length} Found
         </span>
       </div>
 
-      {/* Track List - Same bg as main */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
+      {/* Track List - #18181b */}
+      <div 
+        className="flex-1 overflow-y-auto custom-scrollbar"
+        style={{ backgroundColor: COLORS.tracklist }}
+      >
         <div className="py-1">
           {displayTracks.map((track, idx) => (
-            <TrackRow key={idx} track={track} bgCard={bgCard} textMuted={textMuted} />
+            <TrackRow key={idx} track={track} />
           ))}
         </div>
       </div>
 
-      {/* Export Button */}
-      <div className="px-3 py-2">
+      {/* Footer - #0f0f10 */}
+      <div className="px-3 pb-3 pt-2" style={{ backgroundColor: COLORS.footer }}>
         <button
           onClick={onExport}
           className="w-full h-10 rounded-md bg-white text-[#0D1117] font-semibold text-xs flex items-center justify-center gap-1.5 hover:bg-gray-100 transition-colors"
@@ -522,45 +537,61 @@ function ScanMixContent({
 
 interface TrackRowProps {
   track: Track;
-  bgCard: string;
-  textMuted: string;
 }
 
-function TrackRow({ track, bgCard, textMuted }: TrackRowProps) {
-  return (
-    <div 
-      className={`flex items-center gap-2.5 px-3 py-2 transition-colors ${
-        track.isLive ? 'border-l-2 border-[#00C853]' : 'hover:bg-white/5'
-      }`}
-      style={track.isLive ? { backgroundColor: 'rgba(0, 200, 83, 0.05)' } : {}}
-    >
-      {/* Timestamp Badge - Dark grey rectangles */}
-      <div className="shrink-0">
-        {track.isLive ? (
-          <span className="text-[10px] font-semibold text-[#00C853] px-2 py-1 rounded" style={{ backgroundColor: 'rgba(0, 200, 83, 0.15)' }}>
-            Now
-          </span>
-        ) : (
-          <span className="text-[10px] font-mono px-2 py-1 rounded" style={{ backgroundColor: bgCard, color: textMuted }}>
-            {track.timestamp}
-          </span>
-        )}
+function TrackRow({ track }: TrackRowProps) {
+  // Active/highlighted row: full-width rounded card with #202022 bg
+  // Contrast-based separation, no borders or shadows
+  if (track.isLive) {
+    return (
+      <div 
+        className="mx-2 my-1 px-3 py-2.5 rounded-lg flex items-center gap-3"
+        style={{ backgroundColor: COLORS.trackActive }}
+      >
+        {/* Green "Now" pill badge */}
+        <span 
+          className="text-[10px] font-semibold px-2 py-1 rounded-full shrink-0"
+          style={{ backgroundColor: COLORS.accent, color: '#0D1117' }}
+        >
+          Now
+        </span>
+
+        {/* Track Info */}
+        <div className="flex-1 min-w-0">
+          <h4 className="text-xs font-semibold truncate leading-tight text-white">
+            {track.title}
+          </h4>
+          <p className="text-[10px] truncate" style={{ color: COLORS.textMuted }}>
+            {track.artist}
+          </p>
+        </div>
+
+        {/* Green dot indicator on far right */}
+        <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: COLORS.accent }} />
       </div>
+    );
+  }
+
+  // Non-active rows
+  return (
+    <div className="px-3 py-2.5 flex items-center gap-3 hover:bg-white/5 transition-colors mx-2">
+      {/* Timestamp Badge - Dark grey rectangles */}
+      <span 
+        className="text-[10px] font-mono px-2 py-1 rounded shrink-0"
+        style={{ backgroundColor: '#2a2d35', color: COLORS.textMuted }}
+      >
+        {track.timestamp}
+      </span>
 
       {/* Track Info */}
       <div className="flex-1 min-w-0">
         <h4 className="text-xs font-semibold truncate leading-tight text-white">
           {track.title}
         </h4>
-        <p className="text-[10px] truncate" style={{ color: textMuted }}>
+        <p className="text-[10px] truncate" style={{ color: COLORS.textMuted }}>
           {track.artist}
         </p>
       </div>
-
-      {/* Live Indicator - Green dot on far right */}
-      {track.isLive && (
-        <div className="w-1.5 h-1.5 rounded-full bg-[#00C853] animate-pulse shrink-0" />
-      )}
     </div>
   );
 }

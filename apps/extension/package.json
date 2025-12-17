@@ -12,6 +12,7 @@
     "@avine/types": "workspace:*",
     "@avine/ui": "workspace:*",
     "@types/chrome": "^0.1.32",
+    "@unimusic/chromaprint": "^0.1.4",
     "axios": "^1.13.2",
     "clsx": "^2.0.0",
     "lucide-react": "^0.290.0",

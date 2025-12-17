@@ -17,15 +17,18 @@
     "argon2": "^0.44.0",
     "bullmq": "^5.65.1",
     "dotenv": "^16.3.0",
+    "drizzle-orm": "^0.28.6",
     "fastify": "^4.24.0",
     "fastify-socket.io": "^5.1.0",
     "fastify-type-provider-zod": "^1.1.9",
+    "ioredis": "^5.8.2",
     "jsonwebtoken": "^9.0.3",
     "minio": "^8.0.6",
     "socket.io": "^4.8.1",
     "zod": "^3.22.0"
   },
   "devDependencies": {
+    "@types/ioredis": "^5.0.0",
     "@types/node": "^20.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"

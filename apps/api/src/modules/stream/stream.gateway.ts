@@ -220,7 +220,12 @@ async function recognizeBuffer(socket: Socket, session: StreamSession, buffer: B
         console.log(`[Stream] Match Found: ${trackMeta.artist} - ${trackMeta.title} (Votes: ${bestCandidate.votes}, Conf: ${confidence}%)`);
       }
     } else {
-      console.log(`[Stream] No match found. Top Votes: ${bestCandidate?.votes || 0}`);
+      // Get top vote count from votes map for logging
+      let topVotes = 0;
+      for (const data of votes.values()) {
+        if (data.votes > topVotes) topVotes = data.votes;
+      }
+      console.log(`[Stream] No match found. Top Votes: ${topVotes}`);
       socket.emit('recognition_status', { 
         status: 'listening', 
         message: `Analyzing... (${matches.length} hash matches)` 

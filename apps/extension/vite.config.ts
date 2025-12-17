@@ -21,11 +21,21 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Support top-level await for chromaprint WASM
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'esnext',
+    },
+  },
   build: {
+    target: 'esnext',
     rollupOptions: {
       input: {
         offscreen: path.resolve(__dirname, 'src/offscreen/offscreen.html'),
       },
     },
+  },
+  esbuild: {
+    target: 'esnext',
   },
 })

@@ -2,11 +2,14 @@ import { io, Socket } from 'socket.io-client';
 
 console.log('Offscreen script loaded');
 
+// ===== Live Listen State =====
 let socket: Socket | null = null;
 let audioContext: AudioContext | null = null;
 let mediaStream: MediaStream | null = null;
 let processor: ScriptProcessorNode | null = null;
 let source: MediaStreamAudioSourceNode | null = null;
+
+const API_URL = 'http://localhost:3000';
 
 chrome.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
   console.log('Offscreen received message:', message.type, message.target);
@@ -22,6 +25,10 @@ chrome.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
   }
 });
 
+// ============================================
+// LIVE LISTEN FUNCTIONS
+// ============================================
+
 async function startRecording(streamId: string) {
   if (socket) {
     console.log('Already recording, ignoring');
@@ -31,7 +38,7 @@ async function startRecording(streamId: string) {
   console.log('Connecting to backend WebSocket...');
   
   // Connect to backend
-  socket = io('http://localhost:3000', {
+  socket = io(API_URL, {
     transports: ['websocket'],
     reconnection: true,
     reconnectionAttempts: 5,
@@ -92,7 +99,6 @@ async function startRecording(streamId: string) {
     })));
 
     // Play the captured audio back so the tab isn't muted
-    // This creates an audio element that plays the stream while we process it
     const audioPlayback = new Audio();
     audioPlayback.srcObject = mediaStream;
     audioPlayback.volume = 1.0;
@@ -103,15 +109,12 @@ async function startRecording(streamId: string) {
     audioContext = new AudioContext({ sampleRate: 11025 });
     console.log('AudioContext state:', audioContext.state, 'sampleRate:', audioContext.sampleRate);
     
-    // Resume if suspended
     if (audioContext.state === 'suspended') {
       await audioContext.resume();
       console.log('AudioContext resumed');
     }
 
     source = audioContext.createMediaStreamSource(mediaStream);
-    
-    // ScriptProcessor for raw PCM access
     processor = audioContext.createScriptProcessor(4096, 1, 1);
 
     source.connect(processor);
@@ -128,7 +131,6 @@ async function startRecording(streamId: string) {
 
       const inputData = e.inputBuffer.getChannelData(0);
       
-      // Log periodically
       if (Date.now() - lastLogTime > 5000) {
         const maxVal = Math.max(...Array.from(inputData).map(Math.abs));
         console.log(`Audio stats: chunks sent=${chunksSent}, max amplitude=${maxVal.toFixed(4)}, socket connected=${socket.connected}`);

@@ -9,9 +9,11 @@ import { db } from '@avine/core';
 import { authRoutes } from './modules/auth/auth.routes';
 import { uploadRoutes } from './modules/upload/upload.routes';
 import { analysisRoutes } from './modules/analysis/analysis.routes';
+import { fingerprintRoutes } from './modules/analysis/fingerprint.routes';
 import { exportRoutes } from './modules/export/export.routes';
 import { spotifyRoutes } from './modules/spotify/spotify.routes';
 import { setupStreamGateway } from './modules/stream/stream.gateway';
+import { audioUrlRoutes } from './modules/audio/audio.routes';
 
 const server = Fastify({
   logger: true
@@ -59,8 +61,10 @@ async function main() {
   await server.register(authRoutes, { prefix: '/api/auth' });
   await server.register(uploadRoutes, { prefix: '/api' });
   await server.register(analysisRoutes, { prefix: '/api' });
+  await server.register(fingerprintRoutes, { prefix: '/api' });
   await server.register(exportRoutes, { prefix: '/api' });
   await server.register(spotifyRoutes, { prefix: '/api' });
+  await server.register(audioUrlRoutes, { prefix: '/api' });
 
   server.get('/health', async () => {
     return { status: 'ok', timestamp: new Date().toISOString() };

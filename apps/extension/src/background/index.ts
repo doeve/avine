@@ -3,6 +3,10 @@ console.log('Avine Background Service Worker Started');
 // Get the correct URL for the offscreen document
 const OFFSCREEN_DOCUMENT_PATH = 'src/offscreen/offscreen.html';
 
+// Track last recognized track to prevent notification spam
+let lastRecognizedTrack: { title: string; artist: string; timestamp: number } | null = null;
+const DUPLICATE_THRESHOLD_MS = 30000; // 30 seconds - consider same track as duplicate within this window
+
 // Create offscreen document
 async function createOffscreen() {
   // Check if we already have an offscreen document
@@ -28,6 +32,7 @@ async function createOffscreen() {
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   console.log('Background received message:', message.type);
   
+  // ===== Live Listen Messages =====
   if (message.type === 'START_CAPTURE') {
     handleStartCapture().then(sendResponse).catch(err => {
       console.error('Start capture error:', err);
@@ -39,6 +44,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       type: 'STOP_RECORDING',
       target: 'offscreen'
     });
+    // Reset last recognized track when stopping
+    lastRecognizedTrack = null;
     sendResponse({ success: true });
   } else if (message.type === 'RECOGNITION_RESULT') {
     // Forward to popup and optionally show notification
@@ -48,8 +55,15 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   return false;
 });
 
+// ============================================
+// Live Listen Handlers
+// ============================================
+
 async function handleStartCapture() {
   console.log('Starting capture...');
+  
+  // Reset last recognized track when starting a new session
+  lastRecognizedTrack = null;
   
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) {
@@ -78,9 +92,38 @@ async function handleStartCapture() {
 async function handleRecognitionResult(data: any) {
   console.log('Recognition result:', data);
   
+  const now = Date.now();
+  const isSameTrack = lastRecognizedTrack && 
+    lastRecognizedTrack.title === data.title && 
+    lastRecognizedTrack.artist === data.artist;
+  
+  const isWithinDuplicateWindow = lastRecognizedTrack && 
+    (now - lastRecognizedTrack.timestamp) < DUPLICATE_THRESHOLD_MS;
+  
+  // Skip notification if same track within the duplicate window
+  if (isSameTrack && isWithinDuplicateWindow) {
+    console.log('Skipping duplicate notification for:', data.title);
+    return;
+  }
+  
+  // Update last recognized track
+  lastRecognizedTrack = {
+    title: data.title,
+    artist: data.artist,
+    timestamp: now
+  };
+  
+  // Forward to popup
+  chrome.runtime.sendMessage({
+    type: 'RECOGNITION_RESULT',
+    data
+  }).catch(() => {
+    // Popup might not be open, that's fine
+  });
+  
   // Check if we should show notification
-  const storage = await chrome.storage.local.get(['showPopups']);
-  if (storage.showPopups !== false) {
+  const storage = await chrome.storage.local.get(['notificationsEnabled']);
+  if (storage.notificationsEnabled !== false) {
     chrome.notifications.create({
       type: 'basic',
       iconUrl: chrome.runtime.getURL('icon-128.png'),

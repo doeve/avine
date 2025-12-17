@@ -19,6 +19,8 @@ interface MediaData {
   title: string;
   platform: string;
   duration: number;
+  src?: string;  // Direct media source URL
+  url?: string;  // Page URL
 }
 
 // Custom Wave Icon for header (matching target design)
@@ -50,8 +52,10 @@ const COLORS = {
 export function Popup() {
   const [activeTab, setActiveTab] = useState<TabMode>('live-listen');
   const [isListening, setIsListening] = useState(false);
-  const [isScanning] = useState(false);
-  const [scanProgress] = useState<ScanProgress>({ current: 0, total: 0 });
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState<ScanProgress>({ current: 0, total: 0 });
+  const [scanStatus, setScanStatus] = useState<string>('');
+  const [scanTracks, setScanTracks] = useState<Track[]>([]);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -59,12 +63,15 @@ export function Popup() {
 
   // Load initial state from storage
   useEffect(() => {
-    chrome.storage.local.get(['isListening', 'trackHistory', 'notificationsEnabled', 'activeTab'], (data) => {
+    chrome.storage.local.get(['isListening', 'trackHistory', 'notificationsEnabled', 'activeTab', 'scanTracks'], (data) => {
       if (data.isListening) setIsListening(true);
       if (data.trackHistory && Array.isArray(data.trackHistory)) {
         setTracks(data.trackHistory);
         const last = data.trackHistory[0];
         if (last?.isLive) setCurrentTrack(last);
+      }
+      if (data.scanTracks && Array.isArray(data.scanTracks)) {
+        setScanTracks(data.scanTracks);
       }
       if (typeof data.notificationsEnabled === 'boolean') {
         setNotificationsEnabled(data.notificationsEnabled);
@@ -83,22 +90,59 @@ export function Popup() {
             setMediaData({
               title: response.title,
               platform: response.platform || 'TAB',
-              duration: response.duration
+              duration: response.duration,
+              src: response.src,
+              url: response.url
             });
           }
         });
       }
     });
 
-    // Listen for recognition results
+    // Listen for messages
     const listener = (message: any) => {
+      console.log('Popup received message:', message.type);
+      
       if (message.type === 'RECOGNITION_RESULT') {
         handleNewDetection(message.data);
+      } 
+      // Scan Mix messages
+      else if (message.type === 'SCAN_PROGRESS') {
+        setScanProgress({
+          current: message.data.captured,
+          total: message.data.expected || mediaData?.duration || 0
+        });
+        setScanStatus(`Capturing audio... ${Math.floor(message.data.captured)}s`);
+      } else if (message.type === 'SCAN_PROCESSING') {
+        setScanStatus(message.data.message);
+      } else if (message.type === 'SCAN_COMPLETE') {
+        setIsScanning(false);
+        setScanStatus('');
+        // Convert API response to Track format
+        const newTracks: Track[] = message.data.tracks.map((t: any) => ({
+          timestamp: formatTimeForTrack(t.startTime),
+          title: t.title,
+          artist: t.artist,
+          isLive: false
+        }));
+        setScanTracks(newTracks);
+        chrome.storage.local.set({ scanTracks: newTracks });
+      } else if (message.type === 'SCAN_ERROR') {
+        setIsScanning(false);
+        setScanStatus(`Error: ${message.data.message}`);
       }
     };
+    
     chrome.runtime.onMessage.addListener(listener);
     return () => chrome.runtime.onMessage.removeListener(listener);
-  }, []);
+  }, [mediaData?.duration]);
+
+  // Helper to format seconds to timestamp
+  const formatTimeForTrack = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Persist tracks and settings
   useEffect(() => {
@@ -149,6 +193,84 @@ export function Popup() {
     }
   };
 
+  // Auto-scan when switching to Scan Mix tab and media is detected
+  useEffect(() => {
+    if (activeTab !== 'scan-mix' || !mediaData || isScanning || scanTracks.length > 0) {
+      return;
+    }
+    
+    // Start auto-scan
+    const runScan = async () => {
+      setIsScanning(true);
+      setScanStatus('Detecting media...');
+      setScanTracks([]);
+      
+      try {
+        let audioUrl: string | null = null;
+        let duration = mediaData.duration || 0;
+        
+        // Check if we have a direct media source (mp3, mp4, etc.)
+        if (mediaData.src && mediaData.src.startsWith('http')) {
+          setScanStatus('Using direct media source...');
+          audioUrl = mediaData.src;
+        } else {
+          // For YouTube/SoundCloud/etc., get audio URL from backend
+          setScanStatus('Getting audio stream...');
+          const pageUrl = mediaData.url || window.location.href;
+          const response = await fetch(`http://localhost:3000/api/audio-url?url=${encodeURIComponent(pageUrl)}`);
+          
+          if (!response.ok) {
+            throw new Error('Could not get audio URL');
+          }
+          
+          const data = await response.json();
+          audioUrl = data.audioUrl;
+          duration = data.duration || duration;
+        }
+        
+        if (!audioUrl) {
+          throw new Error('No audio URL found');
+        }
+        
+        setScanProgress({ current: 0, total: duration || mediaData.duration || 0 });
+        setScanStatus('Fetching audio...');
+        
+        // Import fingerprint service dynamically
+        const { scanMix } = await import('../services/fingerprint');
+        
+        const result = await scanMix(
+          audioUrl,
+          duration || mediaData.duration || 0,
+          (status) => setScanStatus(status)
+        );
+        
+        if (result.error) {
+          throw new Error(result.error);
+        }
+        
+        // Convert to Track format
+        const newTracks: Track[] = result.tracks.map((t) => ({
+          timestamp: formatTimeForTrack(t.startTime),
+          title: t.title,
+          artist: t.artist,
+          isLive: false
+        }));
+        
+        setScanTracks(newTracks);
+        chrome.storage.local.set({ scanTracks: newTracks });
+        setScanStatus('');
+        
+      } catch (error) {
+        console.error('Auto-scan error:', error);
+        setScanStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      } finally {
+        setIsScanning(false);
+      }
+    };
+    
+    runScan();
+  }, [activeTab, mediaData, isScanning, scanTracks.length]);
+
   const toggleNotifications = () => {
     const newState = !notificationsEnabled;
     setNotificationsEnabled(newState);
@@ -156,7 +278,8 @@ export function Popup() {
   };
 
   const handleExport = () => {
-    const text = tracks
+    const exportTracks = activeTab === 'scan-mix' ? scanTracks : tracks;
+    const text = exportTracks
       .map(t => `[${t.timestamp}] ${t.title} - ${t.artist}`)
       .join('\n');
     navigator.clipboard.writeText(text);
@@ -225,8 +348,9 @@ export function Popup() {
           <ScanMixContent
             isScanning={isScanning}
             scanProgress={scanProgress}
+            scanStatus={scanStatus}
             mediaData={mediaData}
-            tracks={tracks}
+            tracks={scanTracks}
             onExport={handleExport}
           />
         )}
@@ -413,6 +537,7 @@ function LiveListenContent({
 interface ScanMixContentProps {
   isScanning: boolean;
   scanProgress: ScanProgress;
+  scanStatus: string;
   mediaData: MediaData | null;
   tracks: Track[];
   onExport: () => void;
@@ -421,6 +546,7 @@ interface ScanMixContentProps {
 function ScanMixContent({
   isScanning,
   scanProgress,
+  scanStatus,
   mediaData,
   tracks,
   onExport
@@ -430,18 +556,6 @@ function ScanMixContent({
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
-
-  // Mock data for demonstration
-  const mockTracks: Track[] = [
-    { timestamp: '00:00', title: 'Intro / ID', artist: 'Unknown Artist', isLive: false },
-    { timestamp: '03:45', title: 'Glue', artist: 'Bicep', isLive: false },
-    { timestamp: '08:12', title: 'Midnight City', artist: 'M83', isLive: false },
-    { timestamp: '12:38', title: 'Opus', artist: 'Eric Prydz', isLive: false },
-    { timestamp: '18:45', title: 'Innerbloom', artist: 'Rufus Du Sol', isLive: false },
-    { timestamp: '22:18', title: 'Strobe', artist: 'Deadmau5', isLive: false },
-  ];
-
-  const displayTracks = tracks.length > 0 ? tracks : mockTracks;
 
   return (
     <>
@@ -453,7 +567,7 @@ function ScanMixContent({
             <Disc className="w-6 h-6 text-white/80" />
             <div className="absolute bottom-0.5 left-0.5 bg-black text-[7px] font-bold px-1 py-0.5 rounded-sm text-white flex items-center gap-0.5">
               <span className="text-[6px]">■</span>
-              SC
+              {mediaData?.platform?.substring(0, 2).toUpperCase() || 'TAB'}
             </div>
           </div>
 
@@ -465,9 +579,24 @@ function ScanMixContent({
                   <>
                     <div className="w-1.5 h-1.5 rounded-full bg-[#00C853] animate-pulse" />
                     <span className="text-[10px] font-bold text-[#00C853] uppercase tracking-wide">
-                      Scanning Mix...
+                      {scanStatus || 'Scanning...'}
                     </span>
                   </>
+                )}
+                {!isScanning && tracks.length > 0 && (
+                  <span className="text-[10px] font-bold text-[#00C853] uppercase tracking-wide">
+                    Scan Complete
+                  </span>
+                )}
+                {!isScanning && tracks.length === 0 && !scanStatus && (
+                  <span className="text-[10px] font-medium text-[#8B949E] uppercase tracking-wide">
+                    Waiting for media...
+                  </span>
+                )}
+                {!isScanning && scanStatus && scanStatus.startsWith('Error') && (
+                  <span className="text-[10px] font-medium text-[#F85149] uppercase tracking-wide">
+                    {scanStatus}
+                  </span>
                 )}
               </div>
               <button className="p-0.5 hover:bg-white/5 rounded transition-colors">
@@ -475,16 +604,19 @@ function ScanMixContent({
               </button>
             </div>
             <h3 className="text-sm font-semibold truncate leading-tight">
-              {mediaData?.title || 'Summer House Mix 2024'}
+              {mediaData?.title || 'No media detected'}
             </h3>
+            <p className="text-[10px] truncate" style={{ color: COLORS.textMuted }}>
+              {mediaData ? `${formatTime(mediaData.duration || 0)} duration` : 'Play audio on this tab to scan'}
+            </p>
 
             {/* Progress Bar */}
             {isScanning && scanProgress.total > 0 && (
               <div className="mt-1.5">
                 <div className="h-1 bg-[#30363D] rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-[#00C853] rounded-full"
-                    style={{ width: `${(scanProgress.current / scanProgress.total) * 100}%` }}
+                    className="h-full bg-[#00C853] rounded-full transition-all"
+                    style={{ width: `${Math.min(100, (scanProgress.current / scanProgress.total) * 100)}%` }}
                   />
                 </div>
                 <div className="flex justify-between mt-0.5">
@@ -495,6 +627,13 @@ function ScanMixContent({
                     {formatTime(scanProgress.total)}
                   </span>
                 </div>
+              </div>
+            )}
+
+            {/* Loading animation when scanning without progress */}
+            {isScanning && scanProgress.total === 0 && (
+              <div className="mt-1.5 h-1 bg-[#30363D] rounded-full overflow-hidden">
+                <div className="h-full w-1/3 bg-[#00C853] rounded-full animate-pulse" />
               </div>
             )}
           </div>
@@ -509,12 +648,14 @@ function ScanMixContent({
         <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: COLORS.textMuted }}>
           Identified Songs
         </span>
-        <span 
-          className="text-[10px] font-medium text-[#00C853] px-1.5 py-0.5 rounded"
-          style={{ backgroundColor: 'rgba(0, 200, 83, 0.1)' }}
-        >
-          {displayTracks.length} Found
-        </span>
+        {tracks.length > 0 && (
+          <span 
+            className="text-[10px] font-medium text-[#00C853] px-1.5 py-0.5 rounded"
+            style={{ backgroundColor: 'rgba(0, 200, 83, 0.1)' }}
+          >
+            {tracks.length} Found
+          </span>
+        )}
       </div>
 
       {/* Track List - #18181b */}
@@ -522,18 +663,35 @@ function ScanMixContent({
         className="flex-1 overflow-y-auto custom-scrollbar"
         style={{ backgroundColor: COLORS.tracklist }}
       >
-        <div className="py-1">
-          {displayTracks.map((track, idx) => (
-            <TrackRow key={idx} track={track} />
-          ))}
-        </div>
+        {tracks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-2 p-6 text-center">
+            <Disc className="w-8 h-8 opacity-20" style={{ color: COLORS.textMuted }} />
+            <p className="text-xs" style={{ color: COLORS.textMuted }}>
+              {isScanning ? 'Scanning mix...' : 'No tracks identified yet'}
+            </p>
+            <p className="text-[10px]" style={{ color: COLORS.textMuted, opacity: 0.6 }}>
+              {isScanning ? 'Stop to analyze fingerprints' : 'Start scan to identify tracks'}
+            </p>
+          </div>
+        ) : (
+          <div className="py-1">
+            {tracks.map((track, idx) => (
+              <TrackRow key={idx} track={track} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Footer - #0f0f10 */}
       <div className="px-3 pb-3 pt-2" style={{ backgroundColor: COLORS.footer }}>
         <button
           onClick={onExport}
-          className="w-full h-10 rounded-md bg-white text-[#0D1117] font-semibold text-xs flex items-center justify-center gap-1.5 hover:bg-gray-100 transition-colors"
+          disabled={tracks.length === 0}
+          className={`w-full h-10 rounded-md font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+            tracks.length > 0 
+              ? 'bg-white text-[#0D1117] hover:bg-gray-100' 
+              : 'bg-[#30363D] text-[#8B949E] cursor-not-allowed'
+          }`}
         >
           <Download className="w-3.5 h-3.5" />
           EXPORT TRACKLIST

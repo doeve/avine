@@ -84,3 +84,27 @@ export const subfingerprints = pgTable('subfingerprints', {
   offsetMs: integer('offset_ms').notNull(), // time offset in milliseconds
 });
 
+// Export templates for custom export formats
+export const exportTemplates = pgTable('export_templates', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  name: text('name').notNull(),
+  description: text('description'),
+  format: text('format').default('txt').notNull(), // txt, json, custom
+  template: text('template').notNull(), // Template content with {{variables}}
+  isDefault: boolean('is_default').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// User's personal track library (aggregated from all sessions)
+export const libraryTracks = pgTable('library_tracks', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  title: text('title').notNull(),
+  artist: text('artist').notNull(),
+  album: text('album'),
+  playCount: integer('play_count').default(1).notNull(),
+  lastSeenAt: timestamp('last_seen_at').defaultNow().notNull(),
+  firstSeenAt: timestamp('first_seen_at').defaultNow().notNull(),
+});

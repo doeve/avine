@@ -21,7 +21,7 @@ export function RegisterPage() {
     try {
       const { data } = await api.post('/auth/register', { email, password, displayName });
       login(data.accessToken, data.user);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to register');
     } finally {

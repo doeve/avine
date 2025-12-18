@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
 import { 
   Plus, 
   FileText, 
@@ -9,14 +10,15 @@ import {
   Eye,
   Code,
   Save,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@avine/ui';
 
 interface Template {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   format: string;
   template: string;
   isDefault: boolean;
@@ -29,33 +31,6 @@ const sampleTrack = {
   endTime: 456,
   confidence: 98,
 };
-
-const defaultTemplates: Template[] = [
-  {
-    id: '1',
-    name: 'Simple Text',
-    description: 'Basic artist - title format',
-    format: 'txt',
-    template: '{{artist}} - {{title}}',
-    isDefault: true,
-  },
-  {
-    id: '2',
-    name: 'With Timestamp',
-    description: 'Includes start and end times',
-    format: 'txt',
-    template: '[{{startTime}} - {{endTime}}] {{artist}} - {{title}}',
-    isDefault: false,
-  },
-  {
-    id: '3',
-    name: 'YouTube Chapter',
-    description: 'YouTube video chapter format',
-    format: 'txt',
-    template: '{{startTime}} {{title}} - {{artist}}',
-    isDefault: false,
-  },
-];
 
 const availableVariables = [
   { name: 'title', description: 'Track title' },
@@ -87,13 +62,29 @@ function renderTemplate(template: string, track: typeof sampleTrack, index: numb
 }
 
 export function TemplatesPage() {
-  const [templates, setTemplates] = useState<Template[]>(defaultTemplates);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  const fetchTemplates = async () => {
+    try {
+      const { data } = await api.get('/templates');
+      setTemplates(data);
+    } catch (error) {
+      console.error('Failed to fetch templates', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCreateNew = () => {
     const newTemplate: Template = {
-      id: Date.now().toString(),
+      id: '',
       name: 'New Template',
       description: 'Custom export template',
       format: 'txt',
@@ -104,36 +95,74 @@ export function TemplatesPage() {
     setIsCreating(true);
   };
 
-  const handleSave = (template: Template) => {
-    if (isCreating) {
-      setTemplates([...templates, template]);
-    } else {
-      setTemplates(templates.map(t => t.id === template.id ? template : t));
+  const handleSave = async (template: Template) => {
+    try {
+      if (isCreating) {
+        const { data } = await api.post('/templates', {
+          name: template.name,
+          description: template.description,
+          format: template.format,
+          template: template.template,
+        });
+        setTemplates([...templates, data]);
+      } else {
+        const { data } = await api.put(`/templates/${template.id}`, {
+          name: template.name,
+          description: template.description,
+          format: template.format,
+          template: template.template,
+        });
+        setTemplates(templates.map(t => t.id === template.id ? data : t));
+      }
+    } catch (error) {
+      console.error('Failed to save template', error);
     }
     setEditingTemplate(null);
     setIsCreating(false);
   };
 
-  const handleDelete = (id: string) => {
-    setTemplates(templates.filter(t => t.id !== id));
+  const handleDelete = async (id: string) => {
+    try {
+      await api.delete(`/templates/${id}`);
+      setTemplates(templates.filter(t => t.id !== id));
+    } catch (error) {
+      console.error('Failed to delete template', error);
+    }
   };
 
-  const handleSetDefault = (id: string) => {
-    setTemplates(templates.map(t => ({
-      ...t,
-      isDefault: t.id === id,
-    })));
+  const handleSetDefault = async (id: string) => {
+    try {
+      await api.put(`/templates/${id}/default`);
+      setTemplates(templates.map(t => ({
+        ...t,
+        isDefault: t.id === id,
+      })));
+    } catch (error) {
+      console.error('Failed to set default template', error);
+    }
   };
 
-  const handleDuplicate = (template: Template) => {
-    const duplicate: Template = {
-      ...template,
-      id: Date.now().toString(),
-      name: `${template.name} (Copy)`,
-      isDefault: false,
-    };
-    setTemplates([...templates, duplicate]);
+  const handleDuplicate = async (template: Template) => {
+    try {
+      const { data } = await api.post('/templates', {
+        name: `${template.name} (Copy)`,
+        description: template.description,
+        format: template.format,
+        template: template.template,
+      });
+      setTemplates([...templates, data]);
+    } catch (error) {
+      console.error('Failed to duplicate template', error);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -302,7 +331,7 @@ function TemplateEditor({
               <label className="text-sm font-medium">Description</label>
               <input
                 type="text"
-                value={description}
+                value={description || ''}
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="What this template is for"

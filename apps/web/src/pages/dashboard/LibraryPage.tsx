@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
 import { 
   Music, 
   Search, 
@@ -6,30 +7,65 @@ import {
   Play,
   Heart,
   MoreHorizontal,
-  TrendingUp
+  TrendingUp,
+  RefreshCw
 } from 'lucide-react';
+import { Button } from '@avine/ui';
 
 interface LibraryTrack {
+  id: string;
   title: string;
   artist: string;
-  count: number;
-  lastSeen: string;
+  album: string | null;
+  playCount: number;
+  lastSeenAt: string;
+  firstSeenAt: string;
 }
 
-// Mock data for demonstration - in production this would come from the API
-const mockLibraryTracks: LibraryTrack[] = [
-  { title: 'Strobe', artist: 'deadmau5', count: 5, lastSeen: '2024-12-15' },
-  { title: 'One More Time', artist: 'Daft Punk', count: 3, lastSeen: '2024-12-14' },
-  { title: 'Levels', artist: 'Avicii', count: 7, lastSeen: '2024-12-17' },
-  { title: 'Sandstorm', artist: 'Darude', count: 2, lastSeen: '2024-12-10' },
-  { title: 'In the End', artist: 'Linkin Park', count: 4, lastSeen: '2024-12-12' },
-];
+interface LibraryStats {
+  totalTracks: number;
+  totalPlays: number;
+  topArtist: string | null;
+}
 
 export function LibraryPage() {
-  const [tracks] = useState<LibraryTrack[]>(mockLibraryTracks);
-  const [loading] = useState(false);
+  const [tracks, setTracks] = useState<LibraryTrack[]>([]);
+  const [stats, setStats] = useState<LibraryStats>({ totalTracks: 0, totalPlays: 0, topArtist: null });
+  const [loading, setLoading] = useState(true);
+  const [rebuilding, setRebuilding] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'count' | 'lastSeen' | 'title'>('count');
+  const [sortBy, setSortBy] = useState<'playCount' | 'lastSeenAt' | 'title'>('playCount');
+
+  useEffect(() => {
+    fetchLibrary();
+  }, []);
+
+  const fetchLibrary = async () => {
+    try {
+      const [tracksRes, statsRes] = await Promise.all([
+        api.get('/library'),
+        api.get('/library/stats'),
+      ]);
+      setTracks(tracksRes.data);
+      setStats(statsRes.data);
+    } catch (error) {
+      console.error('Failed to fetch library', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRebuild = async () => {
+    setRebuilding(true);
+    try {
+      await api.post('/library/rebuild');
+      await fetchLibrary();
+    } catch (error) {
+      console.error('Failed to rebuild library', error);
+    } finally {
+      setRebuilding(false);
+    }
+  };
 
   const filteredTracks = tracks
     .filter(track => 
@@ -37,12 +73,10 @@ export function LibraryPage() {
       track.artist.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .sort((a, b) => {
-      if (sortBy === 'count') return b.count - a.count;
-      if (sortBy === 'lastSeen') return new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime();
+      if (sortBy === 'playCount') return b.playCount - a.playCount;
+      if (sortBy === 'lastSeenAt') return new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime();
       return a.title.localeCompare(b.title);
     });
-
-  const totalPlays = tracks.reduce((sum, t) => sum + t.count, 0);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -70,7 +104,7 @@ export function LibraryPage() {
             <TrendingUp className="w-4 h-4" />
             <span className="text-sm">Total Plays</span>
           </div>
-          <div className="text-2xl font-bold">{totalPlays}</div>
+          <div className="text-2xl font-bold">{stats.totalPlays}</div>
         </div>
         <div className="p-4 rounded-xl border border-border bg-card/50">
           <div className="flex items-center gap-2 text-muted-foreground mb-2">
@@ -78,7 +112,7 @@ export function LibraryPage() {
             <span className="text-sm">Top Artist</span>
           </div>
           <div className="text-2xl font-bold truncate">
-            {tracks.reduce((a, b) => a.count > b.count ? a : b, tracks[0])?.artist || '-'}
+            {stats.topArtist || '-'}
           </div>
         </div>
       </div>
@@ -100,10 +134,20 @@ export function LibraryPage() {
           onChange={(e) => setSortBy(e.target.value as any)}
           className="h-10 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
         >
-          <option value="count">Most Played</option>
-          <option value="lastSeen">Recently Seen</option>
+          <option value="playCount">Most Played</option>
+          <option value="lastSeenAt">Recently Seen</option>
           <option value="title">Alphabetical</option>
         </select>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleRebuild}
+          disabled={rebuilding}
+          className="gap-2"
+        >
+          <RefreshCw className={`w-4 h-4 ${rebuilding ? 'animate-spin' : ''}`} />
+          Rebuild
+        </Button>
       </div>
 
       {/* Tracks List */}
@@ -147,10 +191,10 @@ export function LibraryPage() {
               <div className="text-right shrink-0">
                 <div className="flex items-center gap-1 text-sm font-medium">
                   <TrendingUp className="w-3.5 h-3.5 text-primary" />
-                  {track.count} plays
+                  {track.playCount} plays
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5">
-                  Last: {new Date(track.lastSeen).toLocaleDateString()}
+                  Last: {new Date(track.lastSeenAt).toLocaleDateString()}
                 </div>
               </div>
 

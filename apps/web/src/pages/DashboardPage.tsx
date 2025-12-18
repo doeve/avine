@@ -3,10 +3,9 @@ import { useAuthStore } from '../store/auth.store';
 import { Button } from '@avine/ui';
 import { FileUpload } from '../components/FileUpload';
 import { ExportButton } from '../components/ExportButton';
-import { LiveRecognition } from '../components/LiveRecognition';
 import { SpotifyConnect } from '../components/SpotifyConnect';
 import { api } from '../lib/api';
-import { Loader2, Music, Clock, CheckCircle, AlertCircle, Upload, Radio } from 'lucide-react';
+import { Loader2, Music, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface Session {
   id: string;
@@ -32,7 +31,6 @@ export function DashboardPage() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedTracks, setSelectedTracks] = useState<Track[]>([]);
   const [loadingTracks, setLoadingTracks] = useState(false);
-  const [activeTab, setActiveTab] = useState<'upload' | 'live'>('upload');
 
   const fetchSessions = async () => {
     try {
@@ -91,47 +89,12 @@ export function DashboardPage() {
         <div className="grid gap-8 md:grid-cols-3">
           {/* Left Column: Upload & History */}
           <div className="md:col-span-1 space-y-4">
-            {/* Tab Switcher */}
-            <div className="flex rounded-lg bg-card/50 p-1 border border-border">
-              <button
-                onClick={() => setActiveTab('upload')}
-                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                  activeTab === 'upload' 
-                    ? 'bg-accent text-white shadow-sm' 
-                    : 'text-muted-foreground hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Upload className="w-4 h-4" />
-                Upload
-              </button>
-              <button
-                onClick={() => setActiveTab('live')}
-                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                  activeTab === 'live' 
-                    ? 'bg-accent text-white shadow-sm' 
-                    : 'text-muted-foreground hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Radio className="w-4 h-4" />
-                Live
-              </button>
+            
+            {/* Upload Area */}
+            <div className="p-6 rounded-lg border bg-card text-card-foreground shadow-sm">
+              <h3 className="text-lg font-semibold mb-4">Upload Audio</h3>
+              <FileUpload />
             </div>
-
-            {/* Upload Mode */}
-            {activeTab === 'upload' && (
-              <div className="p-6 rounded-lg border bg-card text-card-foreground shadow-sm">
-                <h3 className="text-lg font-semibold mb-4">Upload Audio</h3>
-                <FileUpload />
-              </div>
-            )}
-
-            {/* Live Mode - No wrapper padding to allow full edge-to-edge component feel */}
-            {activeTab === 'live' && (
-              <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
-                 {/* LiveRecognition handles its own internal layout */}
-                <LiveRecognition />
-              </div>
-            )}
 
             <div className="p-6 rounded-lg border bg-card text-card-foreground shadow-sm">
               <div className="flex items-center justify-between mb-4">

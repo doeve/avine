@@ -1,9 +1,7 @@
 /**
- * Audio Fingerprinting Service
- * Client-side fingerprint generation using @unimusic/chromaprint WASM
+ * Scan Mix Service
+ * Calls server-side scan-mix endpoint for fingerprint analysis
  */
-
-import { processAudioFile, ChromaprintAlgorithm } from '@unimusic/chromaprint';
 
 const API_URL = 'http://localhost:3000';
 
@@ -15,6 +13,7 @@ export interface ScanResult {
     endTime: number;
     confidence: number;
   }>;
+  duration?: number;
   error?: string;
 }
 
@@ -29,99 +28,71 @@ export interface MediaInfo {
 }
 
 /**
- * Fetches audio file from URL and generates fingerprints
+ * Get audio URL (for platforms that need extraction)
  */
-export async function fetchAndFingerprint(
-  audioUrl: string,
-  onProgress?: (status: string) => void
-): Promise<string[]> {
-  onProgress?.('Fetching audio file...');
-  
-  // Fetch the audio file
-  const response = await fetch(audioUrl);
+async function getAudioUrl(pageUrl: string): Promise<{ audioUrl: string; duration?: number }> {
+  const response = await fetch(`${API_URL}/api/audio-url?url=${encodeURIComponent(pageUrl)}`);
   if (!response.ok) {
-    throw new Error(`Failed to fetch audio: ${response.status}`);
+    throw new Error(`Failed to get audio URL: ${response.status}`);
   }
-  
-  const arrayBuffer = await response.arrayBuffer();
-  onProgress?.('Generating fingerprints...');
-  
-  // Generate fingerprints using chromaprint WASM
-  const fingerprints: string[] = [];
-  
-  // Process with chunked fingerprints for mix analysis
-  const generator = processAudioFile(arrayBuffer, {
-    maxDuration: 600, // 10 minutes max per chunk
-    chunkDuration: 30, // 30 second chunks for track detection
-    algorithm: ChromaprintAlgorithm.Default,
-    rawOutput: true, // Get raw fingerprint for matching
-    overlap: true, // Overlap chunks for better detection
-  });
-  
-  for await (const fingerprint of generator) {
-    fingerprints.push(fingerprint);
-    onProgress?.(`Generated ${fingerprints.length} fingerprints...`);
-  }
-  
-  return fingerprints;
-}
-
-/**
- * Sends fingerprints to server for matching
- */
-export async function matchFingerprints(
-  fingerprints: string[],
-  duration: number,
-  onProgress?: (status: string) => void
-): Promise<ScanResult> {
-  onProgress?.('Analyzing fingerprints...');
-  
-  // Convert raw fingerprint strings to segment format
-  const segments = fingerprints.map((fp, idx) => {
-    // Parse comma-separated raw fingerprint
-    const hashes = fp.split(',').map(h => parseInt(h, 10) >>> 0);
-    return {
-      start: idx * 30, // 30 second chunks
-      fingerprint: hashes
-    };
-  });
-  
-  const response = await fetch(`${API_URL}/api/analyze-fingerprints`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      segments,
-      duration,
-      segmentDuration: 30
-    })
-  });
-  
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
-  }
-  
   return response.json();
 }
 
 /**
- * Full scan workflow: fetch audio, fingerprint, and match
+ * Full scan workflow: handles URL extraction and server-side fingerprinting
  */
 export async function scanMix(
-  audioUrl: string,
-  duration: number,
+  mediaInfo: { src?: string; url?: string; duration?: number; platform?: string },
   onProgress?: (status: string) => void
 ): Promise<ScanResult> {
   try {
-    const fingerprints = await fetchAndFingerprint(audioUrl, onProgress);
+    let audioUrl: string;
     
-    if (fingerprints.length === 0) {
-      return { tracks: [], error: 'No fingerprints generated' };
+    // Check if we have a direct media source (mp3, mp4, etc.)
+    console.log(mediaInfo);
+    debugger;
+    if (mediaInfo.src && mediaInfo.src.startsWith('http')) {
+      onProgress?.('Using direct media source...');
+      audioUrl = mediaInfo.src;
+    } else if (mediaInfo.platform === 'YouTube' || mediaInfo.platform === 'SoundCloud') {
+      // For YouTube/SoundCloud, get audio URL from backend
+      onProgress?.('Extracting audio stream...');
+      const pageUrl = mediaInfo.url || '';
+      if (!pageUrl) {
+        return { tracks: [], error: 'No URL available' };
+      }
+      const data = await getAudioUrl(pageUrl);
+      audioUrl = data.audioUrl;
+    } else {
+      return { tracks: [], error: 'Unsupported media source' };
     }
     
-    const result = await matchFingerprints(fingerprints, duration, onProgress);
+    if (!audioUrl) {
+      return { tracks: [], error: 'No audio URL found' };
+    }
+    
+    // Call server-side scan-mix endpoint
+    onProgress?.('Analyzing audio (server-side)...');
+    
+    const response = await fetch(`${API_URL}/api/scan-mix`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ audioUrl })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      throw new Error(error.message || `API error: ${response.status}`);
+    }
+    
+    const result = await response.json();
     onProgress?.('Complete');
     
-    return result;
+    return {
+      tracks: result.tracks,
+      duration: result.duration
+    };
+    
   } catch (error) {
     console.error('Scan error:', error);
     return { 
@@ -129,43 +100,4 @@ export async function scanMix(
       error: error instanceof Error ? error.message : 'Unknown error' 
     };
   }
-}
-
-/**
- * Get audio URL from various platforms
- * Note: For YouTube/SoundCloud, we need a proxy or backend service
- */
-export async function getAudioUrl(mediaInfo: MediaInfo): Promise<string | null> {
-  // For direct audio/video files
-  if (mediaInfo.src && mediaInfo.src.startsWith('http')) {
-    return mediaInfo.src;
-  }
-  
-  // For YouTube - need to get audio stream URL via backend
-  if (mediaInfo.platform === 'YouTube') {
-    try {
-      const response = await fetch(`${API_URL}/api/audio-url?url=${encodeURIComponent(mediaInfo.url)}`);
-      if (response.ok) {
-        const data = await response.json();
-        return data.audioUrl;
-      }
-    } catch (error) {
-      console.error('Failed to get YouTube audio URL:', error);
-    }
-  }
-  
-  // For SoundCloud
-  if (mediaInfo.platform === 'SoundCloud') {
-    try {
-      const response = await fetch(`${API_URL}/api/audio-url?url=${encodeURIComponent(mediaInfo.url)}`);
-      if (response.ok) {
-        const data = await response.json();
-        return data.audioUrl;
-      }
-    } catch (error) {
-      console.error('Failed to get SoundCloud audio URL:', error);
-    }
-  }
-  
-  return null;
 }

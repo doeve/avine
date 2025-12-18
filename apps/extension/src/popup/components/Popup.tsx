@@ -202,45 +202,22 @@ export function Popup() {
     // Start auto-scan
     const runScan = async () => {
       setIsScanning(true);
-      setScanStatus('Detecting media...');
+      setScanStatus('Preparing scan...');
       setScanTracks([]);
       
       try {
-        let audioUrl: string | null = null;
-        let duration = mediaData.duration || 0;
-        
-        // Check if we have a direct media source (mp3, mp4, etc.)
-        if (mediaData.src && mediaData.src.startsWith('http')) {
-          setScanStatus('Using direct media source...');
-          audioUrl = mediaData.src;
-        } else {
-          // For YouTube/SoundCloud/etc., get audio URL from backend
-          setScanStatus('Getting audio stream...');
-          const pageUrl = mediaData.url || window.location.href;
-          const response = await fetch(`http://localhost:3000/api/audio-url?url=${encodeURIComponent(pageUrl)}`);
-          
-          if (!response.ok) {
-            throw new Error('Could not get audio URL');
-          }
-          
-          const data = await response.json();
-          audioUrl = data.audioUrl;
-          duration = data.duration || duration;
-        }
-        
-        if (!audioUrl) {
-          throw new Error('No audio URL found');
-        }
-        
-        setScanProgress({ current: 0, total: duration || mediaData.duration || 0 });
-        setScanStatus('Fetching audio...');
+        setScanProgress({ current: 0, total: mediaData.duration || 0 });
         
         // Import fingerprint service dynamically
         const { scanMix } = await import('../services/fingerprint');
         
         const result = await scanMix(
-          audioUrl,
-          duration || mediaData.duration || 0,
+          {
+            src: mediaData.src,
+            url: mediaData.url,
+            duration: mediaData.duration,
+            platform: mediaData.platform
+          },
           (status) => setScanStatus(status)
         );
         

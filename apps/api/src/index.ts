@@ -14,6 +14,7 @@ import { exportRoutes } from './modules/export/export.routes';
 import { spotifyRoutes } from './modules/spotify/spotify.routes';
 import { setupStreamGateway } from './modules/stream/stream.gateway';
 import { audioUrlRoutes } from './modules/audio/audio.routes';
+import { scanMixRoutes } from './modules/analysis/scanmix.routes';
 
 const server = Fastify({
   logger: true
@@ -65,6 +66,7 @@ async function main() {
   await server.register(exportRoutes, { prefix: '/api' });
   await server.register(spotifyRoutes, { prefix: '/api' });
   await server.register(audioUrlRoutes, { prefix: '/api' });
+  await server.register(scanMixRoutes, { prefix: '/api' });
 
   server.get('/health', async () => {
     return { status: 'ok', timestamp: new Date().toISOString() };

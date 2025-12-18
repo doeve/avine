@@ -92,13 +92,13 @@ export function DashboardPage() {
           {/* Left Column: Upload & History */}
           <div className="md:col-span-1 space-y-4">
             {/* Tab Switcher */}
-            <div className="flex rounded-lg border bg-card p-1">
+            <div className="flex rounded-lg bg-card/50 p-1 border border-border">
               <button
                 onClick={() => setActiveTab('upload')}
-                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                   activeTab === 'upload' 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-accent text-white shadow-sm' 
+                    : 'text-muted-foreground hover:text-white hover:bg-white/5'
                 }`}
               >
                 <Upload className="w-4 h-4" />
@@ -106,10 +106,10 @@ export function DashboardPage() {
               </button>
               <button
                 onClick={() => setActiveTab('live')}
-                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                   activeTab === 'live' 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-accent text-white shadow-sm' 
+                    : 'text-muted-foreground hover:text-white hover:bg-white/5'
                 }`}
               >
                 <Radio className="w-4 h-4" />
@@ -125,10 +125,10 @@ export function DashboardPage() {
               </div>
             )}
 
-            {/* Live Mode */}
+            {/* Live Mode - No wrapper padding to allow full edge-to-edge component feel */}
             {activeTab === 'live' && (
-              <div className="p-6 rounded-lg border bg-card text-card-foreground shadow-sm">
-                <h3 className="text-lg font-semibold mb-4">Live Recognition</h3>
+              <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
+                 {/* LiveRecognition handles its own internal layout */}
                 <LiveRecognition />
               </div>
             )}

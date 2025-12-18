@@ -11,7 +11,10 @@ import {
   Filter,
   Calendar,
   ArrowRight,
-  Trash2
+  Trash2,
+  Puzzle,
+  Upload,
+  Link as LinkIcon
 } from 'lucide-react';
 import { Button } from '@avine/ui';
 
@@ -129,17 +132,36 @@ export function HistoryPage() {
               to={`/dashboard/session/${session.id}`}
               className="group flex items-center gap-4 p-4 rounded-xl border border-border bg-card/50 hover:bg-card hover:border-primary/50 transition-all duration-200"
             >
-              {/* Icon */}
-              <div className="w-12 h-12 rounded-xl bg-muted/50 flex items-center justify-center shrink-0">
-                <Music className="w-5 h-5 text-muted-foreground" />
+              {/* Icon - varies by source type */}
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                session.sourceType === 'BROWSER_EXTENSION' 
+                  ? 'bg-primary/10' 
+                  : 'bg-muted/50'
+              }`}>
+                {session.sourceType === 'BROWSER_EXTENSION' ? (
+                  <Puzzle className="w-5 h-5 text-primary" />
+                ) : session.sourceType === 'URL' ? (
+                  <LinkIcon className="w-5 h-5 text-muted-foreground" />
+                ) : (
+                  <Upload className="w-5 h-5 text-muted-foreground" />
+                )}
               </div>
 
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-semibold text-sm">
-                    {session.sourceType === 'URL' ? 'URL Analysis' : 'File Upload'}
+                    {session.sourceType === 'BROWSER_EXTENSION' 
+                      ? 'Extension Session' 
+                      : session.sourceType === 'URL' 
+                        ? 'URL Analysis' 
+                        : 'File Upload'}
                   </span>
+                  {session.sourceType === 'BROWSER_EXTENSION' && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-medium">
+                      EXT
+                    </span>
+                  )}
                   <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-muted/50 text-muted-foreground">
                     {getStatusIcon(session.status)}
                     {getStatusLabel(session.status)}

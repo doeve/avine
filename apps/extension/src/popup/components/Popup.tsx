@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Settings, Music, Mic, Disc, StopCircle, Upload, Download, Bell, ExternalLink } from 'lucide-react';
+import { Settings, Music, Mic, Disc, StopCircle, Upload, Download, Bell, ExternalLink, LogIn, User } from 'lucide-react';
+import { getAuthState, syncAuthFromWeb, openWebLogin, AuthState } from '../../lib/auth';
 
-type TabMode = 'scan-mix' | 'live-listen';
+type TabMode = 'live-listen' | 'scan-mix';
 
 interface Track {
   timestamp: string;
@@ -26,11 +27,11 @@ interface MediaData {
 // Custom Wave Icon for header (matching target design)
 function WaveIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <rect x="2" y="9" width="3" height="6" rx="1" />
-      <rect x="7" y="5" width="3" height="14" rx="1" />
-      <rect x="12" y="7" width="3" height="10" rx="1" />
-      <rect x="17" y="4" width="3" height="16" rx="1" />
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M2 12h2a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H2V12z" fill="currentColor" />
+      <path d="M8 8h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8V8z" fill="currentColor" />
+      <path d="M14 4h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2V4z" fill="currentColor" />
+      <path d="M20 10h2a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2v-8z" fill="currentColor" />
     </svg>
   );
 }
@@ -40,6 +41,8 @@ const COLORS = {
   header: '#0f0f10',        // Header background
   preview: '#18181b',       // Song preview card background
   separator: '#191c23',     // Session feed separator label
+  bodyBg: '#09090b',        // Main body background
+  footerBorder: '#1c1f26',  // Footer top border
   tracklist: '#18181b',     // Tracklist background
   trackActive: '#202022',   // Highlighted/active track row
   footer: '#0f0f10',        // Footer background
@@ -60,6 +63,24 @@ export function Popup() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [mediaData, setMediaData] = useState<MediaData | null>(null);
+  const [auth, setAuth] = useState<AuthState>({ accessToken: null, user: null, isAuthenticated: false });
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Load auth state on mount
+  useEffect(() => {
+    async function loadAuth() {
+      let authState = await getAuthState();
+      
+      // If not authenticated, try to sync from web app
+      if (!authState.isAuthenticated) {
+        authState = await syncAuthFromWeb();
+      }
+      
+      setAuth(authState);
+      setAuthLoading(false);
+    }
+    loadAuth();
+  }, []);
 
   // Load initial state from storage
   useEffect(() => {
@@ -308,6 +329,46 @@ export function Popup() {
           </button>
         </div>
       </div>
+      {/* Login Prompt Overlay - show when not authenticated */}
+      {!authLoading && !auth.isAuthenticated && (
+        <div 
+          className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6"
+          style={{ backgroundColor: COLORS.bodyBg }}
+        >
+          <div className="w-16 h-16 rounded-full bg-[#00C853]/10 flex items-center justify-center mb-4">
+            <LogIn className="w-8 h-8 text-[#00C853]" />
+          </div>
+          <h2 className="text-lg font-semibold text-white mb-2">Sign in to Avine</h2>
+          <p className="text-sm text-[#8B949E] text-center mb-6">
+            Connect to sync your sessions and tracks across devices
+          </p>
+          <button
+            onClick={openWebLogin}
+            className="w-full py-3 px-4 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2"
+            style={{ backgroundColor: '#00C853', color: '#000' }}
+          >
+            <ExternalLink className="w-4 h-4" />
+            Open Web App to Sign In
+          </button>
+          <button
+            onClick={async () => {
+              const newAuth = await syncAuthFromWeb();
+              setAuth(newAuth);
+            }}
+            className="mt-3 text-xs text-[#8B949E] hover:text-white transition-colors"
+          >
+            Already logged in? Click to sync
+          </button>
+        </div>
+      )}
+
+      {/* Auth status indicator in header */}
+      {auth.isAuthenticated && auth.user && (
+        <div className="absolute top-2.5 right-10 flex items-center gap-1.5 text-xs text-[#00C853]">
+          <User className="w-3 h-3" />
+          <span className="max-w-[80px] truncate">{auth.user.displayName}</span>
+        </div>
+      )}
 
       {/* Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
